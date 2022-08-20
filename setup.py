@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='basedir',
-    version="1.0.0",
+    version="1.0.1",
     description="Library that simplifies access to local directories and files",
     long_description="",
     author='kawazome',
