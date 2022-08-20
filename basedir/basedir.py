@@ -86,6 +86,13 @@ class basedir(object):
             if name == os.path.basename(file): return file
         return None
 
+    def file_ext(self,name):
+        for file in self.files():
+            if name == os.path.basename(file):
+                base, ext = os.path.splitext(file)
+                return ext
+        return None
+
     def exist_file(self,name): return name in self.names_files()
 
     def remove_subdir(self, name):
