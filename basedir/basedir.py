@@ -1,13 +1,16 @@
 #!/user/local/bin/python3
 # -*- coding: utf-8 -*-
 
-import os, sys, shutil
+import os, shutil
 
 class basedir(object):
 
     def __init__(self, path='./'):
         if os.path.isdir(path): self._path = path
         else: self._path = None
+        self._dirs = []
+        self._files = []
+        self._read = False
         self.read()
 
     def read(self):
@@ -25,7 +28,7 @@ class basedir(object):
 
     def basedir(self): return self
 
-    def subdir(self, name, make_if_not=False):
+    def get_subdir(self, name, make_if_not=False):
         if not self._path: return None
         for dir in self.subdirs():
             if name == dir.name(): return dir
@@ -33,7 +36,7 @@ class basedir(object):
         return None
 
     def make_subdir(self, name):
-        sub = self.subdir(name,make_if_not=False)
+        sub = self.get_subdir(name,make_if_not=False)
         if sub: return sub
         path = self._path + '/' + name
         if not os.path.isdir(path): os.mkdir(path)
@@ -62,7 +65,7 @@ class basedir(object):
         return names
 
     def subdir_path(self,name):
-        sub = self.subdir(name)
+        sub = self.get_subdir(name)
         if sub: sub.path()
         return None
 
@@ -96,7 +99,7 @@ class basedir(object):
     def exist_file(self,name): return name in self.names_files()
 
     def remove_subdir(self, name):
-        sub = self.subdir(name,make_if_not=False)
+        sub = self.get_subdir(name,make_if_not=False)
         if sub:
             if os.path.isdir(sub.path()): os.rmdir(sub.path())
             self._dirs.remove(sub)
@@ -137,7 +140,7 @@ class basedir(object):
     def copy_dir_here(self,src_dir):
         if not isinstance(src_dir, (basedir, subdir)): return
         shutil.copytree(src_dir.path(), self.path())
-        sub = self.subdir(src_dir.name())
+        sub = self.get_subdir(src_dir.name())
         if sub: sub.read()
         else: self.make_subdir(src_dir.name())
 
@@ -145,19 +148,19 @@ class basedir(object):
         if not isinstance(src_dir, (basedir, subdir)): return
         dest_path = self.path() + '/' + src_dir.name()
         shutil.move(src_dir.path(),dest_path)
-        sub = self.subdir(src_dir.name())
+        sub = self.get_subdir(src_dir.name())
         if sub: sub.read()
         else: self.make_subdir(src_dir.name())
         src_dir.remove_me()
 
     def copy_dir_to(self, name, dest_dir):
         if not isinstance(dest_dir, (basedir, subdir)): return
-        sub = self.subdir(name)
+        sub = self.get_subdir(name)
         if sub: dest_dir.copy_dir_here(sub)
 
     def move_dir_to(self, name, dest_dir):
         if not isinstance(dest_dir, (basedir, subdir)): return
-        sub = self.subdir(name)
+        sub = self.get_subdir(name)
         if sub: dest_dir.move_dir_here(sub)
 
     def dprint(self):
@@ -220,7 +223,7 @@ class subdir(basedir):
 def test():
 
     base = basedir("/Users/kawazome/Documents/Develop/python/sas_contents/output/root/foo")
-    ja = base.subdir("ja")
+    ja = base.get_subdir("ja")
     ja.dprint()
     #en = base.subdir("en")
     #en.subdir("json").copy_file_here(ja.subdir("json").file_path("faq.json"))
