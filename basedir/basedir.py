@@ -110,19 +110,32 @@ class basedir(object):
         self._files.remove(file_path)
         if os.path.isfile(file_path): os.remove(file_path)
 
-    def copy_file_here(self,file_path):
+    def copy(self,src,dest=None):
+        if isinstance(src,str) and isinstance(dest, (basedir, subdir)): self.copy_to(src,dest)
+        self.copy_here(src,dest)
+
+    def copy_here(self,src,name=None):
+        if isinstance(src, str): self.copy_file_here(src,name)
+        elif isinstance(src, (basedir, subdir)): self.copy_dir_here(src,name)
+
+    def copy_file_here(self,file_path,name=None):
         if not os.path.isfile(file_path): return
-        name = os.path.basename(file_path)
+        if not name: name = os.path.basename(file_path)
         dest_path = self.path() + '/' + name
         if not self.exist_file(name): self._files.append(dest_path)
         shutil.copyfile(file_path, dest_path)
 
-    def move_file_here(self,file_path):
-        if not os.path.isfile(file_path): return
-        name = os.path.basename(file_path)
-        dest_path = self.path() + '/' + name
-        if not self.exist_file(name): self._files.append(dest_path)
-        shutil.move(file_path,self.path())
+    def copy_dir_here(self,src_dir,name=None):
+        if not isinstance(src_dir, (basedir, subdir)): return
+        if not name: name = src_dir.name()
+        shutil.copytree(src_dir.path(), self.path() + '/' + name)
+        sub = self.get_subdir(name)
+        if sub: sub.read()
+        else: self.make_subdir(name)
+
+    def copy_to(self,name,dest):
+        if self.exist_file(name): self.copy_file_to(name, dest)
+        elif self.exist_dir(name): self.copy_dir_to(name, dest)
 
     def copy_file_to(self, name, dest_dir):
         file_path = self.file_path(name)
@@ -130,33 +143,46 @@ class basedir(object):
         if not isinstance(dest_dir, (basedir, subdir)): return
         dest_dir.copy_file_here(file_path)
 
+    def copy_dir_to(self, name, dest_dir):
+        if not isinstance(dest_dir, (basedir, subdir)): return
+        sub = self.get_subdir(name)
+        if sub: dest_dir.copy_dir_here(sub)
+
+    def move(self,src,dest=None):
+        if isinstance(src,str) and isinstance(dest, (basedir, subdir)): self.move_to(src,dest)
+        self.move_here(src,dest)
+
+    def move_here(self,src,name=None):
+        if isinstance(src, str): self.move_file_here(src,name)
+        elif isinstance(src, (basedir, subdir)): self.move_dir_here(src,name)
+
+    def move_file_here(self,file_path, name=None):
+        if not os.path.isfile(file_path): return
+        if not name: name = os.path.basename(file_path)
+        dest_path = self.path() + '/' + name
+        if not self.exist_file(name): self._files.append(dest_path)
+        shutil.move(file_path,self.path())
+
+    def move_dir_here(self,src_dir, name=None):
+        if not isinstance(src_dir, (basedir, subdir)): return
+        if not name: name = src_dir.name()
+        dest_path = self.path() + '/' + name
+        shutil.move(src_dir.path(),dest_path)
+        sub = self.get_subdir(name)
+        if sub: sub.read()
+        else: self.make_subdir(name)
+        src_dir.remove_me()
+
+    def move_to(self,name,dest):
+        if self.exist_file(name): self.move_file_to(name, dest)
+        elif self.exist_dir(name): self.move_dir_to(name, dest)
+
     def move_file_to(self, name, dest_dir):
         file_path = self.file_path(name)
         if not file_path: return
         if not isinstance(dest_dir, (basedir,subdir)): return
         dest_dir.move_file_here(file_path)
         self.remove_file(name)
-
-    def copy_dir_here(self,src_dir):
-        if not isinstance(src_dir, (basedir, subdir)): return
-        shutil.copytree(src_dir.path(), self.path())
-        sub = self.get_subdir(src_dir.name())
-        if sub: sub.read()
-        else: self.make_subdir(src_dir.name())
-
-    def move_dir_here(self,src_dir):
-        if not isinstance(src_dir, (basedir, subdir)): return
-        dest_path = self.path() + '/' + src_dir.name()
-        shutil.move(src_dir.path(),dest_path)
-        sub = self.get_subdir(src_dir.name())
-        if sub: sub.read()
-        else: self.make_subdir(src_dir.name())
-        src_dir.remove_me()
-
-    def copy_dir_to(self, name, dest_dir):
-        if not isinstance(dest_dir, (basedir, subdir)): return
-        sub = self.get_subdir(name)
-        if sub: dest_dir.copy_dir_here(sub)
 
     def move_dir_to(self, name, dest_dir):
         if not isinstance(dest_dir, (basedir, subdir)): return
@@ -219,25 +245,19 @@ class subdir(basedir):
     def remove_me(self):
         self.parent().remove_subdir(self.name())
 
-
 def test():
 
     base = basedir("/Users/kawazome/Documents/Develop/python/sas_contents/output/root/foo")
     ja = base.get_subdir("ja")
+    json = ja.get_subdir("json")
+    hoge = ja.make_subdir("hoge")
+    json.copy("faq.json",hoge)
+    json.move("news.json",hoge)
+    hoge.copy("/Users/kawazome/Documents/Develop/python/sas_contents/output/root/foo/en/json/language.json")
+    ja.copy(hoge,"aho")
+    images = base.get_subdir("en").get_subdir("images")
+    hoge.move(images,"images2")
     ja.dprint()
-    #en = base.subdir("en")
-    #en.subdir("json").copy_file_here(ja.subdir("json").file_path("faq.json"))
-    #ja.dprint()
-    #en.dprint()
-    #th = base.subdir("th")
-    #ko = base.subdir("ko")
-    #tmp = base.subdir("ko").subdir("tmp")
-    #th.move_dir_to("images", tmp)
-    #for path in tmp.paths_from_base(): print(path)
-    #th.dprint()
-    #print(basedir.in_straight(ja,tmp))
-    #print(basedir.in_straight(ko,tmp))
-    #print(basedir.in_straight(tmp,base))
 
 if __name__ == '__main__':
     test()
